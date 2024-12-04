@@ -49,6 +49,12 @@ export function toGeminiSchema(zodSchema: any): any {
       case 'ZodOptional':
         const innerSchema = toGeminiSchema(zodSchema._def.innerType);
         return { ...innerSchema, nullable: true };
+      case 'ZodLiteral':
+        return {
+            type: SchemaType.STRING,
+            enum: [zodSchema._def.value],
+            nullable: zodSchema.isOptional(),
+        };
       default:
         return {
           type: SchemaType.OBJECT,
