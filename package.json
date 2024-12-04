@@ -1,6 +1,6 @@
 {
   "name": "gemini-zod",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Gemini AI Schema to Zod Adapter",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
