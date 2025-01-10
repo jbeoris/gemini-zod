@@ -10,6 +10,7 @@ describe('toGeminiSchema', () => {
         age: z.number(),
         isStudent: z.boolean(),
         optional: z.string().optional(),
+        nullable: z.string().nullable(),
       });
   
       const geminiSchema = toGeminiSchema(zodSchema);
@@ -21,8 +22,9 @@ describe('toGeminiSchema', () => {
           age: { type: SchemaType.NUMBER, nullable: false },
           isStudent: { type: SchemaType.BOOLEAN, nullable: false },
           optional: { type: SchemaType.STRING, nullable: true },
+          nullable: { type: SchemaType.STRING, nullable: true },
         },
-        required: ['name', 'age', 'isStudent'],
+        required: ['name', 'age', 'isStudent', 'nullable'],
       });
     });
   

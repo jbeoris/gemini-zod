@@ -12,14 +12,14 @@ export function toGeminiSchema(zodSchema: any): any {
       case 'ZodObject':
         const properties: Record<string, any> = {};
         const required: string[] = [];
-  
+
         Object.entries(zodSchema.shape).forEach(([key, value]: [string, any]) => {
           properties[key] = toGeminiSchema(value);
           if (getZodType(value) !== 'ZodOptional') {
             required.push(key);
           }
         });
-  
+
         return {
           type: SchemaType.OBJECT,
           properties,
@@ -46,6 +46,7 @@ export function toGeminiSchema(zodSchema: any): any {
           enum: zodSchema._def.values,
           nullable: zodSchema.isOptional(),
         };
+      case 'ZodNullable':
       case 'ZodOptional':
         const innerSchema = toGeminiSchema(zodSchema._def.innerType);
         return { ...innerSchema, nullable: true };
