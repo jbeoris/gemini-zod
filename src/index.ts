@@ -13,14 +13,12 @@ export function toGeminiSchema(zodSchema: any): any {
         const properties: Record<string, any> = {};
         const required: string[] = [];
 
-        Object.entries(zodSchema.shape).forEach(
-          ([key, value]: [string, any]) => {
-            properties[key] = toGeminiSchema(value);
-            if (getZodType(value) !== 'ZodOptional') {
-              required.push(key);
-            }
-          },
-        );
+        Object.entries(zodSchema.shape).forEach(([key, value]: [string, any]) => {
+          properties[key] = toGeminiSchema(value);
+          if (getZodType(value) !== 'ZodOptional') {
+            required.push(key);
+          }
+        });
 
         return {
           type: SchemaType.OBJECT,
