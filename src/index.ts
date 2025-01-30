@@ -1,91 +1,143 @@
 import { getZodType, SchemaType } from './util';
 
+function decorateGeminiSchema(geminiSchema: any, zodSchema: any) {
+  if (geminiSchema.nullable === undefined) {
+    geminiSchema.nullable = zodSchema.isOptional();
+  }
+
+  if (zodSchema.description) {
+    geminiSchema.description = zodSchema.description;
+  }
+
+  return geminiSchema;
+}
+
+function decorateZodSchema(z: any, geminiSchema: any) {
+  if (geminiSchema.nullable) {
+    z = z.nullable();
+  }
+  if (geminiSchema.description) {
+    z = z.describe(geminiSchema.description);
+  }
+
+  return z;
+}
+
 export function toGeminiSchema(zodSchema: any): any {
-    const zodType = getZodType(zodSchema);
-  
-    switch (zodType) {
-      case 'ZodArray':
-        return {
+  const zodType = getZodType(zodSchema);
+
+  switch (zodType) {
+    case 'ZodArray':
+      return decorateGeminiSchema(
+        {
           type: SchemaType.ARRAY,
           items: toGeminiSchema(zodSchema.element),
-        };
-      case 'ZodObject':
-        const properties: Record<string, any> = {};
-        const required: string[] = [];
-  
-        Object.entries(zodSchema.shape).forEach(([key, value]: [string, any]) => {
-          properties[key] = toGeminiSchema(value);
-          if (getZodType(value) !== 'ZodOptional') {
-            required.push(key);
-          }
-        });
-  
-        return {
+        },
+        zodSchema,
+      );
+    case 'ZodObject':
+      const properties: Record<string, any> = {};
+      const required: string[] = [];
+
+      Object.entries(zodSchema.shape).forEach(([key, value]: [string, any]) => {
+        properties[key] = toGeminiSchema(value);
+        if (getZodType(value) !== 'ZodOptional') {
+          required.push(key);
+        }
+      });
+
+      return decorateGeminiSchema(
+        {
           type: SchemaType.OBJECT,
           properties,
           required: required.length > 0 ? required : undefined,
-        };
-      case 'ZodString':
-        return {
+        },
+        zodSchema,
+      );
+    case 'ZodString':
+      return decorateGeminiSchema(
+        {
           type: SchemaType.STRING,
-          nullable: zodSchema.isOptional(),
-        };
-      case 'ZodNumber':
-        return {
+        },
+        zodSchema,
+      );
+    case 'ZodNumber':
+      return decorateGeminiSchema(
+        {
           type: SchemaType.NUMBER,
-          nullable: zodSchema.isOptional(),
-        };
-      case 'ZodBoolean':
-        return {
+        },
+        zodSchema,
+      );
+    case 'ZodBoolean':
+      return decorateGeminiSchema(
+        {
           type: SchemaType.BOOLEAN,
-          nullable: zodSchema.isOptional(),
-        };
-      case 'ZodEnum':
-        return {
+        },
+        zodSchema,
+      );
+    case 'ZodEnum':
+      return decorateGeminiSchema(
+        {
           type: SchemaType.STRING,
           enum: zodSchema._def.values,
-          nullable: zodSchema.isOptional(),
-        };
-      case 'ZodOptional':
-        const innerSchema = toGeminiSchema(zodSchema._def.innerType);
-        return { ...innerSchema, nullable: true };
-      default:
-        return {
+        },
+        zodSchema,
+      );
+    case 'ZodNullable':
+    case 'ZodOptional':
+      const innerSchema = toGeminiSchema(zodSchema._def.innerType);
+      return decorateGeminiSchema(
+        {
+          ...innerSchema,
+          nullable: true,
+        },
+        zodSchema,
+      );
+    default:
+      return decorateGeminiSchema(
+        {
           type: SchemaType.OBJECT,
           nullable: true,
-        };
-    }
+        },
+        zodSchema,
+      );
+  }
 }
-  
+
 export function toZodSchema(geminiSchema: any): any {
-    const z = require('zod'); // Dynamically import zod to avoid bundling it
-  
-    switch (geminiSchema.type) {
-      case SchemaType.ARRAY:
-        return z.array(toZodSchema(geminiSchema.items));
-  
-      case SchemaType.OBJECT:
-        const shape: Record<string, any> = {};
-        Object.entries(geminiSchema.properties).forEach(([key, value]: [string, any]) => {
+  const z = require('zod'); // Dynamically import zod to avoid bundling it
+
+  switch (geminiSchema.type) {
+    case SchemaType.ARRAY:
+      return decorateZodSchema(
+        z.array(toZodSchema(geminiSchema.items)),
+        geminiSchema,
+      );
+
+    case SchemaType.OBJECT:
+      const shape: Record<string, any> = {};
+      Object.entries(geminiSchema.properties).forEach(
+        ([key, value]: [string, any]) => {
           let fieldSchema = toZodSchema(value);
           if (!geminiSchema.required || !geminiSchema.required.includes(key)) {
             fieldSchema = fieldSchema.optional();
           }
           shape[key] = fieldSchema;
-        });
-        return z.object(shape);
-  
-      case SchemaType.STRING:
-        return geminiSchema.nullable ? z.string().nullable() : z.string();
-  
-      case SchemaType.NUMBER:
-      case SchemaType.INTEGER:
-        return geminiSchema.nullable ? z.number().nullable() : z.number();
-  
-      case SchemaType.BOOLEAN:
-        return geminiSchema.nullable ? z.boolean().nullable() : z.boolean();
-  
-      default:
-        return geminiSchema.nullable ? z.any().nullable() : z.any();
-    }
-}  
+        },
+      );
+      return decorateZodSchema(z.object(shape), geminiSchema);
+
+    case SchemaType.STRING:
+      return decorateZodSchema(z.string(), geminiSchema);
+
+    case SchemaType.NUMBER:
+    case SchemaType.INTEGER:
+      return decorateZodSchema(z.number(), geminiSchema);
+
+    case SchemaType.BOOLEAN:
+      return decorateZodSchema(z.boolean(), geminiSchema);
+
+    default:
+      return decorateZodSchema(z.any(), geminiSchema);
+  }
+}
